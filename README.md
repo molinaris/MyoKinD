@@ -1,8 +1,9 @@
 # MyoKinD toolkit
 
-Minimal, reproducible scripts for the **MyoKinD** dataset: *HD sEMG and 3D Hand Kinematics During Dynamic
-Sinusoidally-Modulated Finger Movements*, described in the IEEE Data Descriptor by Aviles-Carrillo,
-Molinari, De Villa and Elias. Dataset DOI: `10.6084/m9.figshare.31032934`.
+Minimal, reproducible scripts for the **MyoKinD** dataset: *HD sEMG and 3D Hand Kinematics During 
+Sinusoidally Modulated Dynamic Finger Movements*, described in the IEEE Data Descriptor by 
+Avilés-Carrillo, Molinari, and Elias. Molinari and Avilés-Carrillo contributed 
+equally to the development of this repository. Dataset DOI: `10.6084/m9.figshare.31032934`.
 
 This repository does **not** ship the dataset itself. Download it from Figshare, unzip it, and point the
 scripts below at the resulting `Dataset/` folder (the one that directly contains `Sub001/ … Sub021/`).

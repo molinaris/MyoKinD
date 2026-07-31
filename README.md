@@ -1,4 +1,5 @@
 # MyoKinD toolkit
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21721906.svg)](https://doi.org/10.5281/zenodo.21721906)
 
 Minimal, reproducible scripts for the **MyoKinD** dataset: *HD sEMG and 3D Hand Kinematics During 
 Sinusoidally Modulated Dynamic Finger Movements*, described in the IEEE Data Descriptor by 

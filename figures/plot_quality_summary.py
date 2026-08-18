@@ -5,8 +5,16 @@ quality table produced by validation/aggregate_quality_metrics.py.
 Prints each metric's mean +/- std, and draws a violin+box layout: top row
 SNR/SMR/SPR (panels A-C), bottom row coherence/phase lag/THDN (panels D-F).
 
+If ``--input-channels-csv`` is also given (the ``--output-csv-channels`` table
+from ``validation/aggregate_quality_metrics.py``), also reports the pooled
+SNR-threshold channel rejection rate: every (channel, trial) HD sEMG row is
+treated as its own instance, and the reported percentage/max-per-participant
+are pooled over all of them - not the trial-averaged ``snr`` column of the
+main quality table, which is what the panels above plot.
+
 Usage:
     python plot_quality_summary.py --input-csv quality_summary.csv --output quality_metrics.png
+    python plot_quality_summary.py --input-csv quality_summary.csv --input-channels-csv quality_summary_channels.csv
 """
 from __future__ import annotations
 
@@ -53,6 +61,34 @@ def summarize(table: pd.DataFrame) -> pd.DataFrame:
         values = table[column].dropna()
         rows.append((column, values.mean(), values.std(), len(values)))
     return pd.DataFrame(rows, columns=["metric", "mean", "std", "n"])
+
+
+def channel_snr_rejection_summary(channel_table: pd.DataFrame, threshold_db: float = SNR_MIN_DB) -> dict:
+    """Pooled SNR-threshold rejection rate over every (channel, trial) HD sEMG row.
+
+    Each of the 128 channels in each valid task trial is treated as its own
+    instance (as opposed to ``summarize``'s ``snr`` column, which is already
+    averaged across the 128 channels of each trial). Returns the percentage of
+    all such instances below ``threshold_db``, and the largest count of
+    below-threshold instances found for any single participant.
+    """
+    below = channel_table["snr_db"] < threshold_db
+    max_below_per_participant = below.groupby(channel_table["participant"]).sum().max()
+    return {
+        "threshold_db": threshold_db,
+        "n_channel_trials": len(channel_table),
+        "n_below_threshold": int(below.sum()),
+        "pct_below_threshold": 100 * below.mean(),
+        "max_below_threshold_per_participant": int(max_below_per_participant),
+    }
+
+
+def _print_channel_snr_summary(summary: dict) -> None:
+    print(f"\nChannel-wise SNR rejection ({summary['n_channel_trials']} channel-trials, "
+          f"threshold={summary['threshold_db']} dB):")
+    print(f"  {summary['pct_below_threshold']:.1f}% of channel-trials fell below the threshold "
+          f"({summary['n_below_threshold']}/{summary['n_channel_trials']})")
+    print(f"  no participant exceeded {summary['max_below_threshold_per_participant']} such channel-trials")
 
 
 def _style_violin(vp, color: str) -> None:
@@ -113,6 +149,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input-csv", required=True, type=Path,
                          help="Per-trial quality table from validation/aggregate_quality_metrics.py")
+    parser.add_argument("--input-channels-csv", type=Path, default=None,
+                         help="Per-channel HD sEMG table from validation/aggregate_quality_metrics.py's "
+                              "--output-csv-channels; if given, also reports the pooled SNR-threshold "
+                              "channel rejection rate")
     parser.add_argument("--output", type=Path, default=None,
                          help="Save the figure (e.g. quality_metrics.png); shown interactively if omitted")
     args = parser.parse_args()
@@ -121,6 +161,10 @@ def main() -> None:
     summary = summarize(table)
     print(f"{len(table)} trial(s) loaded from {args.input_csv}\n")
     print(summary.to_string(index=False))
+
+    if args.input_channels_csv is not None:
+        channel_table = pd.read_csv(args.input_channels_csv)
+        _print_channel_snr_summary(channel_snr_rejection_summary(channel_table))
 
     fig = make_figure(table)
     if args.output is not None:

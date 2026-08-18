@@ -14,9 +14,14 @@ A small subset (a handful of participants) is enough to sanity-check the
 pipeline; running all 21 covers the full population, but can take a while
 (48 trials x 21 participants).
 
+``--output-csv-channels`` optionally saves the raw per-channel HD sEMG table
+(128 channel rows per trial, before it is averaged down into the per-trial
+quality table) - needed for per-channel analyses such as
+``figures/plot_quality_summary.py``'s SNR-threshold channel rejection rate.
+
 Usage:
     python aggregate_quality_metrics.py --root /path/to/Dataset --participants Sub001 Sub002 Sub003 --output-csv quality_summary.csv
-    python aggregate_quality_metrics.py --root /path/to/Dataset --participants all --output-csv quality_summary.csv
+    python aggregate_quality_metrics.py --root /path/to/Dataset --participants all --output-csv quality_summary.csv --output-csv-channels quality_summary_channels.csv
 """
 from __future__ import annotations
 
@@ -148,6 +153,12 @@ def main() -> None:
     parser.add_argument("--output-csv", type=Path, default=None,
                          help="Save the per-trial quality table (participant, task, task_freq, "
                               "trial, snr, smr, spr, thdn, coh, phase_lag)")
+    parser.add_argument("--output-csv-channels", type=Path, default=None,
+                         help="Save the raw per-channel HD sEMG table (participant, task, frequency, "
+                              "repetition, muscle, channel, snr_db, smr_db, spr_db), before it is "
+                              "averaged across the 128 channels into the quality table above - needed "
+                              "for per-channel analyses such as figures/plot_quality_summary.py's "
+                              "SNR-threshold channel rejection rate")
     args = parser.parse_args()
 
     participants = ALL_PARTICIPANTS if args.participants == ["all"] else args.participants
@@ -165,6 +176,10 @@ def main() -> None:
         print(f"\nQuality table written to {args.output_csv}")
         print("Run figures/plot_quality_summary.py on this file to summarize and plot "
               "the quality metric distributions.")
+
+    if args.output_csv_channels is not None:
+        hdsemg.to_csv(args.output_csv_channels, index=False)
+        print(f"\nPer-channel HD sEMG table written to {args.output_csv_channels}")
 
 
 if __name__ == "__main__":

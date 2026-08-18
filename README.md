@@ -55,7 +55,12 @@ MyoKinD/
 │   ├── inspect_dataset.py         # read-only structural/integrity check + manifest
 │   ├── hdsemg_quality.py          # SNR / SMR / SPR quality metrics
 │   ├── kinematic_quality.py       # coherence / phase lag / THDN quality metrics
-│   └── aggregate_quality_metrics.py  # runs both across participants, writes a per-trial quality table
+│   ├── aggregate_quality_metrics.py  # runs both across participants, writes a per-trial quality table
+│   ├── rest_noise_rms.py          # baseline RMS of `rest` recordings vs. the 1 uV storage quantization noise
+│   ├── aggregate_rest_noise.py    # runs the above across participants, writes a per-channel-trial table
+│   ├── wrist_marker_precision.py  # within-trial std of the MW-LW wrist marker distance (OMC precision)
+│   ├── aggregate_wrist_precision.py  # runs the above across participants, writes a per-trial table
+│   └── phase_lag_analysis.py      # phase_lag distribution: fixed-delay/wrapping/task-bug tests, ICC(1), bimodality
 └── figures/
     ├── plot_example_trial.py      # plots HD sEMG + kinematics for any chosen trial
     └── plot_quality_summary.py    # plots quality metric distributions from the quality table above
@@ -74,7 +79,8 @@ conda env create -f environment.yml
 conda activate myokind
 ```
 
-Only `numpy`, `scipy`, `pandas` and `matplotlib` are required — see `requirements.txt`.
+Only `numpy`, `scipy`, `pandas`, `matplotlib`, `scikit-learn` and `diptest` are required — see
+`requirements.txt`. The last two are only used by `validation/phase_lag_analysis.py`.
 
 ## Usage
 
@@ -104,6 +110,23 @@ python validation/kinematic_quality.py --root /path/to/Dataset --participant Sub
 python validation/aggregate_quality_metrics.py --root /path/to/Dataset --participants Sub001 Sub002 Sub003 --output-csv quality_summary.csv
 python validation/aggregate_quality_metrics.py --root /path/to/Dataset --participants all --output-csv quality_summary.csv
 
+# Baseline noise RMS of the `rest` recordings vs. the dataset's 1 uV storage quantization noise
+python validation/rest_noise_rms.py --root /path/to/Dataset --participant Sub001 --all --output-csv sub001_rest_rms.csv
+
+# Aggregate the above across participants into one row per channel-trial (rms_uv, quant_penalty_db)
+python validation/aggregate_rest_noise.py --root /path/to/Dataset --participants Sub001 Sub002 Sub003 --output-csv rest_noise_summary.csv
+python validation/aggregate_rest_noise.py --root /path/to/Dataset --participants all --output-csv rest_noise_summary.csv
+
+# OMC reconstruction precision from the within-trial std of the MW-LW wrist marker distance
+python validation/wrist_marker_precision.py --root /path/to/Dataset --participant Sub001 --all --output-csv sub001_wrist_precision.csv
+
+# Aggregate the above across participants into one row per trial (mean_distance_mm, std_distance_mm)
+python validation/aggregate_wrist_precision.py --root /path/to/Dataset --participants Sub001 Sub002 Sub003 --output-csv wrist_precision_summary.csv
+python validation/aggregate_wrist_precision.py --root /path/to/Dataset --participants all --output-csv wrist_precision_summary.csv
+
+# phase_lag distribution analysis: H1/H2/H3 discrimination, ICC(1) (between- vs. within-participant), bimodality
+python validation/phase_lag_analysis.py --input-csv validation/quality_summary.csv --output-csv phase_lag_analysis_summary.csv
+
 # Plot one trial's HD sEMG + kinematics
 python figures/plot_example_trial.py --root /path/to/Dataset --participant Sub001 --task 7 --freq 05 --rep 0 --output tripod_example.png
 
@@ -131,6 +154,32 @@ per-trial processing.
 - **THDN:** computed as `THD * (A_fundamental / A_fundamental_max_across_fingers) * 100`, i.e. the harmonic
   distortion ratio scaled by each finger's relative fundamental amplitude within the same trial.
 - **HD sEMG units:** raw CSV integers are used directly as microvolts (µV).
+- **Storage quantization is negligible:** values are rounded to whole µV before distribution (the native
+  Intan RHD2164 ADC resolution is 0.195 µV), adding a quantization noise floor of 1/√12 ≈ 0.29 µV RMS to
+  every channel. `validation/rest_noise_rms.py` measures the actual baseline RMS of every `rest` recording
+  and expresses this quantization floor as an SNR penalty relative to it. Across all 21 participants (8064
+  channel-trials, see `validation/rest_noise_summary.csv`), measured rest RMS is 15.68 ± 10.87 µV
+  (min 2.66 µV), giving a worst-case quantization penalty of 0.051 dB (mean 0.005 dB) — well under the
+  0.35 dB penalty a 1 µV noise floor would imply, so the 1 µV rounding is not a meaningful resolution loss
+  in practice.
+- **OMC reconstruction precision:** the wrist stayed stationary throughout the protocol, so the distance
+  between the MW and LW markers (radial/ulnar styloid processes) is nominally constant within a trial;
+  `validation/wrist_marker_precision.py` uses its within-trial standard deviation as an empirical, post hoc
+  estimate of the combined effect of reconstruction error and soft-tissue motion at the wrist. Across all
+  21 participants (1069 valid trials - the 48 task trials plus the 3 `start_position` recordings per
+  participant, minus Sub017's two documented exclusions - see `validation/wrist_precision_summary.csv`),
+  the within-trial standard deviation of this distance was 0.31 mm on average (95th percentile, 0.67 mm).
+- **`phase_lag`'s elevated standard deviation (-0.52 ± 1.01 rad) is trial-to-trial, not between-participant,
+  and not explained by a fixed instrumentation delay, phase wrapping, or a task-specific sign bug:**
+  `validation/phase_lag_analysis.py` tests and rejects all three (see its module docstring), and quantifies
+  the spread with ICC(1) - the one-way random-effects intraclass correlation (Fisher, 1925; Searle, Casella &
+  McCulloch, 1992, sec. 3.4 for unbalanced groups) - by participant: only ~5.6% of the variance is
+  between-participant (ANOVA F(20,986)=3.86, p≈3×10⁻⁸ - detectable, but small - and all 21 per-participant
+  means are negative, i.e. no subgroup of participants with positive mean phase). A 2-component Gaussian
+  mixture fits `phase_lag` better than 1 by BIC (consistently so pooled and within each frequency
+  separately, ruling out a frequency-aggregation artifact), but the Hartigan dip test never rejects
+  unimodality (p > 0.5 in every subset tested) - reported together rather than selectively, the bimodality
+  itself is suggestive, not statistically confirmed.
 - **Missing kinematic samples:** a small number of Angles/Trajectories files have blank cells (flagged as `MISSING_VALUES`, not an error, by `inspect_dataset.py`). These load as
   NaN and are linearly interpolated in `examples/load_kinematics.py` right after loading (with a printed note of where and
 how many values were filled per file), so every downstream script sees a complete, finite signal.

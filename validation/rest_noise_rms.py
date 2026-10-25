@@ -3,7 +3,7 @@
 that floor is quantization vs. genuine (analog/physiological) noise.
 
 The dataset's HD sEMG CSVs store integer microvolt (uV) values (see
-dataset/README.md). The acquisition system's native ADC (Intan RHD2164) has a
+README.md). The acquisition system's native ADC (Intan RHD2164) has a
 0.195 uV/bit resolution, but the distributed values are rounded to whole
 microvolts - a storage quantization step of 1 uV. That step alone adds a
 quantization noise floor of 1/sqrt(12) = 0.29 uV RMS to every channel,
@@ -45,7 +45,7 @@ def compute_rms(x: np.ndarray) -> np.ndarray:
 
 
 def quantization_penalty_db(measured_rms_uv: np.ndarray,
-                             quant_noise_uv: float = QUANTIZATION_NOISE_RMS_UV) -> np.ndarray:
+                            quant_noise_uv: float = QUANTIZATION_NOISE_RMS_UV) -> np.ndarray:
     """SNR penalty (dB) added by the storage quantization noise on top of the
     measured baseline noise (independent variances, so they add in power)."""
     return 10 * np.log10(1 + (quant_noise_uv / measured_rms_uv) ** 2)
@@ -66,7 +66,7 @@ def process_rest_trial(root: Path, participant: str, rep: int) -> pd.DataFrame:
     return pd.DataFrame({
         "participant": participant, "repetition": rep,
         "muscle": muscle, "channel": channel_in_muscle,
-        "rms_uv": rms, "quant_penalty_db": penalty,
+        "rms_uv": rms, "quant_penalty_db": penalty
     })
 
 

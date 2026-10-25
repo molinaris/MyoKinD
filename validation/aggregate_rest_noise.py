@@ -55,15 +55,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", required=True, type=Path, help="Dataset root (contains SubXXX/)")
     parser.add_argument("--participants", nargs="+", required=True,
-                         help="Participant IDs (e.g. Sub001 Sub002), or 'all' for all 21")
+                        help="Participant IDs (e.g. Sub001 Sub002), or 'all' for all 21")
     parser.add_argument("--penalty-threshold-db", type=float, default=0.35,
-                         help="Report how many channel-trials exceed this quantization SNR penalty (dB)")
+                        help="Report how many channel-trials exceed this quantization SNR penalty (dB)")
     parser.add_argument("--output-csv", type=Path, default=None,
-                         help="Save the per-channel-trial table (participant, repetition, muscle, "
-                              "channel, rms_uv, quant_penalty_db)")
+                        help="Save the per-channel-trial table (participant, repetition, muscle, "
+                             "channel, rms_uv, quant_penalty_db)")
     args = parser.parse_args()
 
-    participants = ALL_PARTICIPANTS if args.participants == ["all"] else args.participants
+    participants = ALL_PARTICIPANTS if [p.lower() for p in args.participants] == ["all"] else args.participants
 
     df = collect(args.root, participants)
     summarize(df, args.penalty_threshold_db)

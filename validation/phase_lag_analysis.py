@@ -41,11 +41,11 @@ import argparse
 import sys
 from pathlib import Path
 
+import diptest
 import numpy as np
 import pandas as pd
 from scipy import stats
 from sklearn.mixture import GaussianMixture
-import diptest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from examples.load_hdsemg import TASK_NAMES  # noqa: E402
@@ -57,7 +57,7 @@ FREQ_CODE_TO_HZ = {5: 0.50, 75: 0.75}  # quality_summary.csv's task_freq is read
 # delay alone would produce, for comparison against the observed magnitude.
 UDP_LATENCY_S = 0.07706
 
-THUMB_TASKS = {"4", "5", "6", "7"}  # Thumb, I. Pinch, M. Pinch, Tripod (see TASK_NAMES)
+THUMB_TASKS = {"4", "5", "6", "7", "8"}  # Thumb, I. Pinch, M. Pinch, Tripod, 5-Finger (see TASK_NAMES)
 
 
 def add_derived_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -99,7 +99,7 @@ def ratio_test_h1(df: pd.DataFrame, udp_latency_s: float = UDP_LATENCY_S) -> dic
         "mean_tau_ms_050": mean_tau[0.50], "mean_tau_ms_075": mean_tau[0.75],
         "tau_ratio_050_075": tau_ratio,
         "udp_predicted_phase_050": phi_pred_050, "udp_predicted_phase_075": phi_pred_075,
-        "observed_vs_udp_predicted_ratio": observed_magnitude / abs(phi_pred_050),
+        "observed_vs_udp_predicted_ratio": observed_magnitude / abs(phi_pred_050)
     }
 
 
@@ -115,7 +115,7 @@ def wrapping_test_h2(df: pd.DataFrame) -> dict:
         "n_positive_phase": len(pos), "n_nonpositive_phase": len(neg),
         "median_tau_ms_unwrapped_positive_group": tau_unwrapped_pos.median(),
         "median_tau_ms_asis_nonpositive_group": neg["tau_ms"].median(),
-        "median_tau_ms_asis_positive_group": pos["tau_ms"].median(),
+        "median_tau_ms_asis_positive_group": pos["tau_ms"].median()
     }
 
 
@@ -137,7 +137,7 @@ def bimodality_report(x: np.ndarray) -> dict:
     this question; BIC alone tends to prefer more components on skewed/
     heavy-tailed data even when it is genuinely unimodal."""
     x = np.asarray(x)
-    dip, pval = diptest.diptest(x, boot_pval=True, seed=0)
+    dip, pval = diptest.diptest(x, boot_pval=True, seed=1, n_threads=1)
 
     X = x.reshape(-1, 1)
     bics = {k: GaussianMixture(n_components=k, random_state=0, n_init=10).fit(X).bic(X) for k in (1, 2, 3)}
@@ -153,7 +153,7 @@ def bimodality_report(x: np.ndarray) -> dict:
         "bic_k1": bics[1], "bic_k2": bics[2], "bic_k3": bics[3],
         "delta_bic_k1_minus_k2": bics[1] - bics[2],  # positive favors k=2 over k=1
         "delta_bic_k3_minus_k2": bics[3] - bics[2],  # positive favors k=2 over k=3
-        "component_means": means, "component_stds": stds, "component_weights": weights,
+        "component_means": means, "component_stds": stds, "component_weights": weights
     }
 
 
@@ -202,12 +202,12 @@ def icc1_one_way(df: pd.DataFrame, value_col: str = "phase_lag", group_col: str 
     return {
         "k_groups": k, "n_total": n_total, "f_stat": f_stat, "p_anova": p_anova,
         "msb": msb, "msw": msw, "n0": n0,
-        "var_between": var_between, "var_within": var_within, "icc1": icc1,
+        "var_between": var_between, "var_within": var_within, "icc1": icc1
     }
 
 
 def subject_mean_bimodality(df: pd.DataFrame, group_col: str = "participant",
-                             value_col: str = "phase_lag") -> dict:
+                            value_col: str = "phase_lag") -> dict:
     """Bimodality report (see bimodality_report) on the per-`group_col` means
     of `value_col` - i.e. is the trial-level split (if any) actually a split
     between groups (e.g. participants), or does it wash out once averaged
@@ -243,7 +243,7 @@ def _print_report(df: pd.DataFrame) -> None:
 
     print("\n=== 5. bimodality of phase_lag (pooled and by frequency) ===")
     for label, sub in (("pooled", df), ("0.50 Hz", df[df["frequency_hz"] == 0.50]),
-                        ("0.75 Hz", df[df["frequency_hz"] == 0.75])):
+                       ("0.75 Hz", df[df["frequency_hz"] == 0.75])):
         r = bimodality_report(sub["phase_lag"].to_numpy())
         print(f"  {label} (n={r['n']}): dip={r['dip']:.4f}, p={r['dip_pvalue']:.4g}  "
               f"dBIC(k1-k2)={r['delta_bic_k1_minus_k2']:+.1f}, dBIC(k3-k2)={r['delta_bic_k3_minus_k2']:+.1f}")
@@ -264,9 +264,9 @@ def _print_report(df: pd.DataFrame) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input-csv", required=True, type=Path,
-                         help="Per-trial quality table from validation/aggregate_quality_metrics.py")
+                        help="Per-trial quality table from validation/aggregate_quality_metrics.py")
     parser.add_argument("--output-csv", type=Path, default=None,
-                         help="Save a flat (metric, value) table with every number in this report")
+                        help="Save the H1, H2, ICC(1), and pooled bimodality results")
     args = parser.parse_args()
 
     df = add_derived_columns(pd.read_csv(args.input_csv))
@@ -280,7 +280,7 @@ def main() -> None:
         rows += [("h2", k, v) for k, v in h2.items()]
         rows += [("icc", k, v) for k, v in icc.items()]
         rows += [("bimodality_pooled", k, v) for k, v in r_all.items()
-                  if k not in ("component_means", "component_stds", "component_weights")]
+                 if k not in ("component_means", "component_stds", "component_weights")]
         summary = pd.DataFrame(rows, columns=["section", "metric", "value"])
         summary.to_csv(args.output_csv, index=False)
         print(f"\nSummary table written to {args.output_csv}")

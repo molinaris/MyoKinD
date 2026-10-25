@@ -4,16 +4,14 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from validation.kinematic_quality import (
-    REFERENCE_FINGER_BY_TASK, compute_coherence_phase, compute_thdn, select_reference_finger,
-    task_reference, trim_signal,
-)
+from validation.kinematic_quality import (REFERENCE_FINGER_BY_TASK, compute_coherence_phase, compute_thdn,
+                                          select_reference_finger, task_reference, trim_signal)
 
 
 def test_reference_finger_by_task():
     assert REFERENCE_FINGER_BY_TASK == {
         "1": "index", "2": "middle", "3": "ring", "4": "thumb",
-        "5": "index", "6": "middle", "7": "index", "8": "index",
+        "5": "index", "6": "middle", "7": "index", "8": "index"
     }
     assert select_reference_finger("3") == "ring"  # Ring-Little task
 
@@ -41,7 +39,7 @@ def test_compute_thdn_pure_sine_has_low_distortion_and_harmonic_signal_has_more(
 
     signals = {
         "thumb": pure, "index": with_harmonics, "middle": small_amplitude_pure,
-        "ring": small_amplitude_pure, "little": small_amplitude_pure,
+        "ring": small_amplitude_pure, "little": small_amplitude_pure
     }
     thdn = compute_thdn(signals, fs=fs, f_task=f_task)
 

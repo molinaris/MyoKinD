@@ -10,7 +10,7 @@ reconstruction error and soft-tissue motion at the wrist.
 
 Computed on every kinematic trial (the 48 numbered task trials plus the 3
 `start_position` recordings - kinematics has no `rest` condition, see
-dataset/README.md), trimmed to the same 4-44 s window used throughout this
+README.md), trimmed to the same 4-44 s window used throughout this
 repository (validation/kinematic_quality.py) to avoid transients at trial
 onset/offset.
 
@@ -56,7 +56,7 @@ def process_trial(root: Path, participant: str, task: str, freq: str | None, rep
     return {
         "participant": participant, "task": task, "frequency": freq, "repetition": rep,
         "mean_distance_mm": float(distance.mean()), "std_distance_mm": float(distance.std()),
-        "n_samples": len(distance),
+        "n_samples": len(distance)
     }
 
 
@@ -74,8 +74,8 @@ def main() -> None:
     parser.add_argument("--freq", default=None, help="'05' or '075' (ignored for start_position/--all)")
     parser.add_argument("--rep", type=int, default=None, help="0, 1, or 2 (ignored if --all)")
     parser.add_argument("--all", action="store_true",
-                         help="process all 51 kinematic trials for the participant "
-                              "(48 task trials + 3 start_position)")
+                        help="process all 51 kinematic trials for the participant "
+                             "(48 task trials + 3 start_position)")
     parser.add_argument("--output-csv", type=Path, default=None, help="Save the per-trial results table")
     args = parser.parse_args()
 

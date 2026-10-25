@@ -14,7 +14,7 @@ def test_summarize_runs_on_synthetic_table_and_flags_the_worst_case(capsys):
         "repetition": [0, 0, 1, 1],
         "mean_distance_mm": [55.0, 55.2, 54.8, 55.1],
         "std_distance_mm": [0.20, 0.45, 0.10, 0.15],
-        "n_samples": [4000, 4000, 4000, 4000],
+        "n_samples": [4000, 4000, 4000, 4000]
     })
 
     summarize(df)

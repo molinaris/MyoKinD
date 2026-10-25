@@ -25,11 +25,11 @@ import numpy as np
 from scipy.signal import resample
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from examples.load_hdsemg import HDSEMG_FS, load_hdsemg_csv, moving_rms, split_edc_fds, trial_filename  # noqa: E402
+from examples.load_hdsemg import (HDSEMG_FS, load_hdsemg_csv, moving_rms,  # noqa: E402
+                                  split_edc_fds, trial_filename)
 from examples.load_kinematics import KIN_FS, load_angles_csv  # noqa: E402
-from validation.kinematic_quality import (  # noqa: E402
-    FREQ_CODE_TO_HZ, compute_coherence_phase, select_reference_finger, task_reference, trim_signal,
-)
+from validation.kinematic_quality import (FREQ_CODE_TO_HZ, compute_coherence_phase,  # noqa: E402
+                                          select_reference_finger, task_reference, trim_signal)
 
 RMS_WINDOW_S = 0.3
 
@@ -53,7 +53,7 @@ def main() -> None:
     parser.add_argument("--task", required=True, help="1-8")
     parser.add_argument("--freq", required=True, help="'05' or '075'")
     parser.add_argument("--rep", type=int, required=True, help="0, 1, or 2")
-    parser.add_argument("--plot", action="store_true")
+    parser.add_argument("--plot", action="store_true", help="Show HD sEMG RMS and kinematics on a common time axis")
     args = parser.parse_args()
 
     emg_path = args.root / args.participant / "HD_sEMG" / trial_filename(
@@ -94,19 +94,34 @@ def main() -> None:
     finger_on_emg_grid = resample_kinematics_to_emg(finger_signal, emg_raw.shape[0])
     reference_on_emg_grid = task_reference(t_emg, f_task)
 
-    fig, axes = plt.subplots(3, 1, figsize=(8, 6), sharex=True)
+    fig, axes = plt.subplots(3, 1, figsize=(9, 6), sharex=True)
     axes[0].plot(t_emg, rms_edc, color="tab:blue")
-    axes[0].set_ylabel("EDC RMS (uV)")
+    axes[0].set_ylabel("Mean EDC RMS (uV)")
     axes[1].plot(t_emg, rms_fds, color="tab:orange")
-    axes[1].set_ylabel("FDS RMS (uV)")
-    axes[2].plot(t_emg, finger_on_emg_grid, color="tab:green", label=f"{reference_finger} angle (deg)")
+    axes[1].set_ylabel("Mean FDS RMS (uV)")
+    axes[2].plot(t_emg, finger_on_emg_grid, color="tab:green", label=f"{reference_finger} finger angle")
     ax2 = axes[2].twinx()
     ax2.plot(t_emg, reference_on_emg_grid, color="gray", linestyle="--", alpha=0.7, label="task reference")
-    axes[2].set_ylabel("Angle (deg)")
+    axes[2].set_ylabel("Position (deg)")
     axes[2].set_xlabel("Time (s), relative to the 4-44 s trimmed window")
     for ax in axes:
         ax.spines[["right", "top"]].set_visible(False)
     fig.tight_layout()
+    fig.canvas.draw()
+    angle_bottom, angle_top = axes[2].get_ylim()
+    reference_bottom, reference_top = ax2.get_ylim()
+    angle_ticks = axes[2].get_yticks()
+    reference_ticks = ax2.get_yticks()
+    axes[2].set_ylim(angle_bottom, angle_top + 0.25 * (angle_top - angle_bottom))
+    ax2.set_ylim(reference_bottom, reference_top + 0.25 * (reference_top - reference_bottom))
+    angle_ticks = angle_ticks[(angle_ticks >= angle_bottom) & (angle_ticks <= angle_top)]
+    reference_ticks = reference_ticks[(reference_ticks >= reference_bottom) & (reference_ticks <= reference_top)]
+    axes[2].set_yticks(angle_ticks)
+    ax2.set_yticks(reference_ticks)
+    lines1, labels1 = axes[2].get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    axes[2].legend(lines1 + lines2, labels1 + labels2, frameon=False, ncols=2, fontsize=9,
+                   loc="upper center", bbox_to_anchor=(0.5, 0.98))
     plt.show()
 
 

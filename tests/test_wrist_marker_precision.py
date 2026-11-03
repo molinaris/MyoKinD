@@ -17,7 +17,7 @@ def _trajectories_row(mw, lw):
 def test_wrist_distance_mm_is_euclidean_distance_between_mw_and_lw():
     df = pd.DataFrame([
         _trajectories_row(mw=(0.0, 0.0, 0.0), lw=(3.0, 4.0, 0.0)),   # 3-4-5 triangle -> 5 mm
-        _trajectories_row(mw=(1.0, 1.0, 1.0), lw=(1.0, 1.0, 1.0)),   # coincident -> 0 mm
+        _trajectories_row(mw=(1.0, 1.0, 1.0), lw=(1.0, 1.0, 1.0))   # coincident -> 0 mm
     ])
     np.testing.assert_allclose(wrist_distance_mm(df), [5.0, 0.0])
 

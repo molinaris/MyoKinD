@@ -22,6 +22,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from matplotlib.figure import Figure
 import numpy as np
 import pandas as pd
 
@@ -79,7 +80,7 @@ def channel_snr_rejection_summary(channel_table: pd.DataFrame, threshold_db: flo
         "n_channel_trials": len(channel_table),
         "n_below_threshold": int(below.sum()),
         "pct_below_threshold": 100 * below.mean(),
-        "max_below_threshold_per_participant": int(max_below_per_participant),
+        "max_below_threshold_per_participant": int(max_below_per_participant)
     }
 
 
@@ -97,7 +98,7 @@ def _style_violin(vp, color: str) -> None:
         body.set_alpha(0.25)
 
 
-def make_figure(table: pd.DataFrame):
+def make_figure(table: pd.DataFrame) -> Figure:
     import matplotlib.pyplot as plt
 
     vp_props = dict(showmeans=False, showextrema=False, showmedians=False, points=100)
@@ -106,7 +107,7 @@ def make_figure(table: pd.DataFrame):
         boxprops=dict(facecolor="white", color="k", linewidth=1, alpha=0.5),
         flierprops=dict(marker=".", mec="none", mfc="k", markersize=3),
         medianprops=dict(color="k", linewidth=1),
-        meanprops=dict(marker="o", mec="k", mfc="none", markersize=3),
+        meanprops=dict(marker="o", mec="k", mfc="none", markersize=3)
     )
 
     fig, ax = plt.subplots(2, 3, figsize=(9, 6))
@@ -119,7 +120,7 @@ def make_figure(table: pd.DataFrame):
         (ax[0, 2], "spr", "SPR (dB)", None, None),
         (ax[1, 0], "coh", r"$\gamma^2_{R,\theta}$", COHERENCE_SIGNIFICANCE_THRESHOLD, r"$C_\alpha$"),
         (ax[1, 1], "phase_lag", r"$\phi_{R,\theta}$ (rad)", None, None),
-        (ax[1, 2], "thdn", r"$\mathrm{THD}_\mathrm{N}$ (%)", None, None),
+        (ax[1, 2], "thdn", r"$\mathrm{THD}_\mathrm{N}$ (%)", None, None)
     ]
     for axis, column, ylabel, ref_line, ref_label in panels:
         values = table[column].dropna().to_numpy()
@@ -148,13 +149,13 @@ def make_figure(table: pd.DataFrame):
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input-csv", required=True, type=Path,
-                         help="Per-trial quality table from validation/aggregate_quality_metrics.py")
+                        help="Per-trial quality table from validation/aggregate_quality_metrics.py")
     parser.add_argument("--input-channels-csv", type=Path, default=None,
-                         help="Per-channel HD sEMG table from validation/aggregate_quality_metrics.py's "
-                              "--output-csv-channels; if given, also reports the pooled SNR-threshold "
-                              "channel rejection rate")
+                        help="Per-channel HD sEMG table from validation/aggregate_quality_metrics.py's "
+                             "--output-csv-channels; if given, also reports the pooled SNR-threshold "
+                             "channel rejection rate")
     parser.add_argument("--output", type=Path, default=None,
-                         help="Save the figure (e.g. quality_metrics.png); shown interactively if omitted")
+                        help="Save the figure (e.g. quality_metrics.png); shown interactively if omitted")
     args = parser.parse_args()
 
     table = pd.read_csv(args.input_csv)

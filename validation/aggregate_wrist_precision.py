@@ -52,13 +52,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", required=True, type=Path, help="Dataset root (contains SubXXX/)")
     parser.add_argument("--participants", nargs="+", required=True,
-                         help="Participant IDs (e.g. Sub001 Sub002), or 'all' for all 21")
+                        help="Participant IDs (e.g. Sub001 Sub002), or 'all' for all 21")
     parser.add_argument("--output-csv", type=Path, default=None,
-                         help="Save the per-trial table (participant, task, frequency, repetition, "
-                              "mean_distance_mm, std_distance_mm, n_samples)")
+                        help="Save the per-trial table (participant, task, frequency, repetition, "
+                             "mean_distance_mm, std_distance_mm, n_samples)")
     args = parser.parse_args()
 
-    participants = ALL_PARTICIPANTS if args.participants == ["all"] else args.participants
+    participants = ALL_PARTICIPANTS if [p.lower() for p in args.participants] == ["all"] else args.participants
 
     df = collect(args.root, participants)
     summarize(df)

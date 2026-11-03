@@ -15,6 +15,9 @@ not be swapped).
 Trajectories: 12 markers x (X, Y, Z), ordered MW, LW, PT, DT, PI, DI, PM, DM,
 PR, DR, PL, DL (wrist markers first, then thumb..little, proximal/distal).
 
+Missing values: blank cells (brief marker occlusion) are filled on load by
+linear interpolation, or held at the nearest valid value at the trial edges.
+
 Usage:
     python load_kinematics.py --file /path/to/Sub001_1_05_450_0.csv --plot
     python load_kinematics.py --root /path/to/Dataset --participant Sub001 --task 1 --freq 05 --rep 0 --plot
@@ -111,7 +114,7 @@ def _resolve_paths(args: argparse.Namespace) -> tuple[Path, Path]:
         return angles_path, Path(*parts)
     if not (args.root and args.participant and args.task is not None and args.rep is not None):
         raise SystemExit("Provide --file (Angles CSV), or --root/--participant/--task/--rep "
-                          "(and --freq for numbered tasks).")
+                         "(and --freq for numbered tasks).")
     name = trial_filename(args.participant, args.task, args.freq, args.rep)
     base = args.root / args.participant / "HandKinematics"
     return base / "Angles" / name, base / "Trajectories" / name
@@ -121,11 +124,16 @@ def _plot(angles: pd.DataFrame) -> None:
     import matplotlib.pyplot as plt
 
     t = (angles["frame"] - 1) / KIN_FS
-    fig, ax = plt.subplots(figsize=(8, 3))
-    for finger in ("thumb", "index", "middle", "ring", "little"):
+    fig, ax = plt.subplots(figsize=(9, 3))
+    finger_columns = ["thumb", "index", "middle", "ring", "little"]
+    for finger in finger_columns:
         ax.plot(t, angles[finger], label=finger)
+    y_max = angles[finger_columns].max().max()
+    y_min = angles[finger_columns].min().min()
+    margin = 0.15 * (y_max - y_min)
+    ax.set_ylim(y_min - margin, y_max + margin)
     ax.set_xlabel("Time (s)")
-    ax.set_ylabel("Angle (deg)")
+    ax.set_ylabel("Position (deg)")
     ax.spines[["right", "top"]].set_visible(False)
     ax.legend(frameon=False, ncols=5, fontsize=8)
     fig.tight_layout()
@@ -138,8 +146,8 @@ def main() -> None:
     parser.add_argument("--root", type=Path, default=None, help="Dataset root (contains SubXXX/)")
     parser.add_argument("--participant", default=None, help="e.g. Sub001")
     parser.add_argument("--task", default=None,
-                         help="1-8 (see TASK_NAMES: 1=Index, 2=Middle, 3=Ring-Little, 4=Thumb, "
-                              "5=I.Pinch, 6=M.Pinch, 7=Tripod, 8=5-Finger), or 'start_position'")
+                        help="1-8 (see TASK_NAMES: 1=Index, 2=Middle, 3=Ring-Little, 4=Thumb, "
+                             "5=I.Pinch, 6=M.Pinch, 7=Tripod, 8=5-Finger), or 'start_position'")
     parser.add_argument("--freq", default=None, help="'05' or '075' (ignored for start_position)")
     parser.add_argument("--rep", type=int, default=None, help="0, 1, or 2")
     parser.add_argument("--plot", action="store_true", help="Show the 5 finger angle traces")

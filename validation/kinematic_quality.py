@@ -17,10 +17,11 @@ Parameters:
 - Coherence / phase lag: Welch/CSD-based, 4 s window, no overlap, explicit
   periodic Hann window; both evaluated at the task frequency bin.
 - THDN: Welch PSD (4 s window, periodic Hann window), harmonic distortion
-  ratio (fundamental + 4 harmonics) scaled by each finger's fundamental
-  amplitude relative to the largest one across the 5 fingers of the same
-  trial - this scaled ratio (not the plain, unscaled THD) is the THDN metric
-  used throughout this repository.
+  ratio (fundamental + 4 harmonics, with the amplitude of each component
+  estimated from the target frequency bin ± 1 bin) scaled by each
+  finger's fundamental amplitude relative to the largest one across the 5
+  fingers of the same trial - this scaled ratio (not the plain, unscaled THD)
+  is the THDN metric used throughout this repository.
 
 Usage:
     python kinematic_quality.py --root /path/to/Dataset --participant Sub001 --task 1 --freq 05 --rep 0
@@ -49,6 +50,7 @@ FINGERS = ["thumb", "index", "middle", "ring", "little"]
 TRIM_START_S = 4.0
 TRIM_END_S = 44.0
 COHERENCE_WINDOW_S = 4.0
+THDN_WINDOW = "hann"
 THDN_WINDOW_S = 4.0
 THDN_N_HARMONICS = 5
 THDN_N_BINS = 1
@@ -61,8 +63,7 @@ FREQ_CODE_TO_HZ = {"05": 0.5, "075": 0.75}
 # (e.g. task "3" = Ring-Little).
 REFERENCE_FINGER_BY_TASK = {
     "1": "index", "2": "middle", "3": "ring", "4": "thumb",
-    "5": "index", "6": "middle", "7": "index", "8": "index",
-}
+    "5": "index", "6": "middle", "7": "index", "8": "index"}
 
 
 def periodic_hann(n: int) -> np.ndarray:
@@ -71,7 +72,7 @@ def periodic_hann(n: int) -> np.ndarray:
 
 
 def trim_signal(x: np.ndarray, fs: float, start_s: float = TRIM_START_S,
-                 end_s: float = TRIM_END_S) -> np.ndarray:
+                end_s: float = TRIM_END_S) -> np.ndarray:
     i0 = int(round(start_s * fs))
     i1 = int(round(end_s * fs))
     return x[i0:i1]
@@ -87,7 +88,7 @@ def select_reference_finger(task: str) -> str:
 
 
 def compute_coherence_phase(reference: np.ndarray, signal: np.ndarray, fs: float, f_task: float,
-                             window_s: float = COHERENCE_WINDOW_S) -> tuple[float, float]:
+                            window_s: float = COHERENCE_WINDOW_S) -> tuple[float, float]:
     """Spectral coherence and phase lag (CSD angle) at the task frequency."""
     nperseg = int(round(window_s * fs))
     window = periodic_hann(nperseg)
@@ -105,30 +106,42 @@ def _band_amplitude(pxx: np.ndarray, idx_center: int, n_bins: int, delta_f: floa
 
 
 def compute_thdn(finger_signals: dict[str, np.ndarray], fs: float, f_task: float,
-                  window_s: float = THDN_WINDOW_S, n_harmonics: int = THDN_N_HARMONICS,
-                  n_bins: int = THDN_N_BINS) -> dict[str, float]:
+                 window_s: float = THDN_WINDOW_S, n_harmonics: int = THDN_N_HARMONICS,
+                 n_bins: int = THDN_N_BINS, window: str = THDN_WINDOW,
+                 return_details: bool = False) -> dict[str, float] | tuple[dict[str, float], dict[str, dict]]:
     """Normalized Total Harmonic Distortion (THDN) for each finger.
 
     THDN = THD_ratio * (A_fundamental / A_fundamental_max_across_fingers) * 100,
     where THD_ratio = sqrt(sum(A_harmonic^2 for harmonics 2..n)) / A_fundamental.
+
+    The amplitude of the fundamental and each harmonic is estimated by
+    integrating the PSD over the target frequency bin ± `n_bins` bins.
+
+    The THDN calculation uses the expected task frequency (`f_task`) as the
+    fundamental frequency. When `return_details=True`, the dominant detected
+    frequency of each finger is also returned from the PSD for quality-control
+    and frequency-compliance analyses.
+
     The scaling by relative fundamental amplitude across the 5 fingers of the
     same trial is part of this metric's definition (as opposed to the plain,
     unscaled THD).
     """
     nperseg = int(round(window_s * fs))
     delta_f = fs / nperseg
-    window = periodic_hann(nperseg)
 
     fundamental_amplitude = {}
     psd_by_finger = {}
     freq_by_finger = {}
+    detected_frequency = {}
     for finger, signal in finger_signals.items():
         f, pxx = welch(signal, fs=fs, nperseg=nperseg, noverlap=0, detrend="linear", window=window)
         idx_fund = int(np.argmin(np.abs(f - f_task)))
         fundamental_amplitude[finger] = _band_amplitude(pxx, idx_fund, n_bins, delta_f)
+        valid_idx = np.where(f > 0)[0]
+        idx_detected = valid_idx[np.argmax(pxx[valid_idx])]
+        detected_frequency[finger] = float(f[idx_detected])
         psd_by_finger[finger] = pxx
         freq_by_finger[finger] = f
-
     max_fundamental = max(fundamental_amplitude.values())
 
     thdn = {}
@@ -136,14 +149,22 @@ def compute_thdn(finger_signals: dict[str, np.ndarray], fs: float, f_task: float
         f = freq_by_finger[finger]
         pxx = psd_by_finger[finger]
         amplitudes = [fundamental_amplitude[finger]]
+
         for harmonic in range(2, n_harmonics + 1):
             idx_center = int(np.argmin(np.abs(f - harmonic * f_task)))
             amplitudes.append(_band_amplitude(pxx, idx_center, n_bins, delta_f))
-        amplitudes = np.array(amplitudes)
+
+        amplitudes = np.asarray(amplitudes, dtype=float)
         thd_ratio = np.sqrt(np.sum(amplitudes[1:] ** 2)) / amplitudes[0]
         scale = fundamental_amplitude[finger] / max_fundamental
         thdn[finger] = float(thd_ratio * scale * 100.0)
-    return thdn
+
+    if not return_details:
+        return thdn
+    details = {finger: {"f": freq_by_finger[finger], "pxx": psd_by_finger[finger],
+                        "fundamental_amplitude": fundamental_amplitude[finger],
+                        "detected_frequency": detected_frequency[finger]} for finger in finger_signals}
+    return thdn, details
 
 
 def process_trial(root: Path, participant: str, task: str, freq: str, rep: int) -> pd.DataFrame:
@@ -168,7 +189,7 @@ def process_trial(root: Path, participant: str, task: str, freq: str, rep: int) 
             "finger": finger, "is_reference_finger": is_reference,
             "thdn_percent": thdn[finger],
             "coherence": coherence_value if is_reference else np.nan,
-            "phase_lag_rad": phase_lag if is_reference else np.nan,
+            "phase_lag_rad": phase_lag if is_reference else np.nan
         })
     return pd.DataFrame(rows)
 

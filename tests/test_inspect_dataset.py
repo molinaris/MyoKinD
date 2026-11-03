@@ -82,13 +82,13 @@ def test_probe_kinematics_real_file(dataset_root):
 
 
 def test_sub017_documented_exceptions(dataset_root):
-    """The dataset's two documented gaps (see dataset/README.md) must be exactly
+    """The dataset's two documented gaps (see README.md) must be exactly
     these files, and nothing else should be missing for this participant."""
     base = dataset_root / "Sub017"
     assert not (base / "HD_sEMG" / "Sub017_3_05_450_1.csv").exists()
     assert not (base / "HandKinematics" / "Angles" / "Sub017_start_position_0.csv").exists()
     assert not (base / "HandKinematics" / "Trajectories" / "Sub017_start_position_0.csv").exists()
-    # the HD sEMG counterpart of start_position_0 is NOT excluded (per dataset/README.md)
+    # the HD sEMG counterpart of start_position_0 is NOT excluded (per README.md)
     assert (base / "HD_sEMG" / "Sub017_start_position_0.csv").exists()
 
     result = insp.probe_hdsemg(base / "HD_sEMG" / "Sub017_1_05_450_0.csv")

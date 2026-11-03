@@ -31,7 +31,7 @@ TASK_NAMES = {
     "5": "I. Pinch",
     "6": "M. Pinch",
     "7": "Tripod",
-    "8": "5-Finger",
+    "8": "5-Finger"
 }
 
 
@@ -73,7 +73,7 @@ def _resolve_path(args: argparse.Namespace) -> Path:
         return args.file
     if not (args.root and args.participant and args.task is not None and args.rep is not None):
         raise SystemExit("Provide --file, or --root/--participant/--task/--rep "
-                          "(and --freq for numbered tasks).")
+                         "(and --freq for numbered tasks).")
     name = trial_filename(args.participant, args.task, args.freq, args.rep)
     return args.root / args.participant / "HD_sEMG" / name
 
@@ -85,10 +85,10 @@ def _plot(edc: np.ndarray, fds: np.ndarray, rms_window_samples: int) -> None:
     rms_edc = moving_rms(edc, rms_window_samples)
     rms_fds = moving_rms(fds, rms_window_samples)
 
-    fig, axes = plt.subplots(2, 1, figsize=(8, 5), sharex=True)
+    fig, axes = plt.subplots(2, 1, figsize=(9, 5), sharex=True)
     for ax, rms, label in zip(axes, (rms_edc, rms_fds), ("EDC", "FDS")):
-        ax.plot(t, rms, color="tab:blue", alpha=0.15, linewidth=0.5)
-        ax.plot(t, rms.mean(axis=1), color="tab:blue", linewidth=1.5, label="channel mean")
+        ax.plot(t, rms, color="tab:blue", alpha=0.15, linewidth=0.3)
+        ax.plot(t, rms.mean(axis=1), color="tab:blue", linewidth=1.0, label="channel mean", zorder=10)
         ax.set_ylabel(f"{label} RMS (uV)")
         ax.spines[["right", "top"]].set_visible(False)
     axes[0].legend(frameon=False, loc="upper right")
@@ -103,8 +103,8 @@ def main() -> None:
     parser.add_argument("--root", type=Path, default=None, help="Dataset root (contains SubXXX/)")
     parser.add_argument("--participant", default=None, help="e.g. Sub001")
     parser.add_argument("--task", default=None,
-                         help="1-8 (see TASK_NAMES: 1=Index, 2=Middle, 3=Ring-Little, 4=Thumb, "
-                              "5=I.Pinch, 6=M.Pinch, 7=Tripod, 8=5-Finger), 'rest', or 'start_position'")
+                        help="1-8 (see TASK_NAMES: 1=Index, 2=Middle, 3=Ring-Little, 4=Thumb, "
+                             "5=I.Pinch, 6=M.Pinch, 7=Tripod, 8=5-Finger), 'rest', or 'start_position'")
     parser.add_argument("--freq", default=None, help="'05' or '075' (ignored for rest/start_position)")
     parser.add_argument("--rep", type=int, default=None, help="0, 1, or 2")
     parser.add_argument("--plot", action="store_true", help="Show a channel-wise RMS plot")

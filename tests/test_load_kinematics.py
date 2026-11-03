@@ -1,9 +1,8 @@
 """Tests for examples/load_kinematics.py."""
 from __future__ import annotations
 
-from examples.load_kinematics import (
-    ANGLE_COLUMN_NAMES, KIN_FS, TRAJECTORY_COLUMN_NAMES, load_angles_csv, load_trajectories_csv,
-)
+from examples.load_kinematics import (ANGLE_COLUMN_NAMES, KIN_FS, TRAJECTORY_COLUMN_NAMES,
+                                      load_angles_csv, load_trajectories_csv)
 
 
 def test_angle_column_names_are_in_increasing_index_order():

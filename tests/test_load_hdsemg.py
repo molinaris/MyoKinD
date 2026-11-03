@@ -3,9 +3,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from examples.load_hdsemg import (
-    HDSEMG_FS, TASK_NAMES, load_hdsemg_csv, moving_rms, split_edc_fds, trial_filename,
-)
+from examples.load_hdsemg import (HDSEMG_FS, TASK_NAMES, load_hdsemg_csv, moving_rms,
+                                  split_edc_fds, trial_filename)
 
 
 def test_trial_filename_task():
@@ -21,7 +20,7 @@ def test_task_names():
     """Regression check: task codes 1-8 (the T field of SubXXX_T_F_450_R.csv)."""
     assert TASK_NAMES == {
         "1": "Index", "2": "Middle", "3": "Ring-Little", "4": "Thumb",
-        "5": "I. Pinch", "6": "M. Pinch", "7": "Tripod", "8": "5-Finger",
+        "5": "I. Pinch", "6": "M. Pinch", "7": "Tripod", "8": "5-Finger"
     }
 
 

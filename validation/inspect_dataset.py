@@ -9,7 +9,8 @@ content, expected file pairs across modalities) and prints a summary. A full
 manifest can optionally be written to CSV.
 
 This script never modifies the dataset and only uses the standard library
-plus pandas (for the optional manifest export).
+plus pandas (to build and summarize the manifest, and for its optional CSV
+export).
 
 Usage:
     python inspect_dataset.py --root /path/to/Dataset [--manifest-csv out.csv] [--quiet]
@@ -20,12 +21,13 @@ import argparse
 import os
 import re
 import time
+from collections.abc import Iterator
 from pathlib import Path
 
 import pandas as pd
 
 # --- Known, fixed properties of the dataset, confirmed directly against real sample
-# files (see also dataset/README.md) ---
+# files (see also README.md) ---
 HDSEMG_FS = 2052.5245535714284      # Hz; not stored in the CSV itself
 HDSEMG_N_ROWS = 92160
 HDSEMG_N_COLUMNS = 128
@@ -40,7 +42,7 @@ TASKS = [str(t) for t in range(1, 9)]                   # '1' .. '8'
 FREQUENCIES = ["05", "075"]                             # literal strings, not decimals
 REPETITIONS = [0, 1, 2]
 
-# Documented dataset exceptions (see dataset/README.md): a (participant,
+# Documented dataset exceptions (see README.md): a (participant,
 # modality, task, frequency, repetition) key expected to be ABSENT. Anything
 # else missing is reported as an anomaly instead of an expected exclusion.
 KNOWN_EXCEPTIONS = {
@@ -48,7 +50,7 @@ KNOWN_EXCEPTIONS = {
     ("Sub017", "angles", "3", "05", 1),
     ("Sub017", "trajectories", "3", "05", 1),
     ("Sub017", "angles", "start_position", None, 0),
-    ("Sub017", "trajectories", "start_position", None, 0),
+    ("Sub017", "trajectories", "start_position", None, 0)
 }
 
 TASK_RE = re.compile(r"^(Sub\d{3})_([1-8])_(05|075)_450_([0-2])\.csv$")
@@ -100,7 +102,7 @@ def classify_file(path: Path, root: Path) -> str:
     return "unknown"
 
 
-def iter_csv_files(root: Path):
+def iter_csv_files(root: Path) -> Iterator[Path]:
     """Yield every real CSV file under root, skipping macOS zip artifacts."""
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if d != "__MACOSX"]
@@ -137,7 +139,7 @@ def probe_hdsemg(path: Path) -> dict:
 
     if first_line == "":
         return {"n_rows": 0, "n_columns": 0, "sampling_frequency_hz": HDSEMG_FS,
-                 "duration_s": 0.0, "status": "EMPTY", "notes": "file has no content"}
+                "duration_s": 0.0, "status": "EMPTY", "notes": "file has no content"}
 
     fields = first_line.split(",")
     n_columns = len(fields)
@@ -159,7 +161,7 @@ def probe_hdsemg(path: Path) -> dict:
     return {
         "n_rows": n_rows, "n_columns": n_columns,
         "sampling_frequency_hz": HDSEMG_FS, "duration_s": n_rows / HDSEMG_FS,
-        "status": status, "notes": "; ".join(notes),
+        "status": status, "notes": "; ".join(notes)
     }
 
 
@@ -170,9 +172,8 @@ def probe_kinematics(path: Path, modality: str) -> dict:
     is scanned - not just the first one. This lets us tell apart two very
     different situations: a MISSING value (blank cell, e.g. ``1,0,,,,0,0,...``)
     is an expected artifact of marker occlusion near a trial's boundaries
-    (documented in dataset/README.md), whereas a genuine
-    NON_NUMERIC token (anything that is neither blank nor a valid float) would
-    indicate real corruption.
+    (documented in README.md), whereas a genuine NON_NUMERIC token (anything
+    that is neither blank nor a valid float) would indicate real corruption.
     """
     expected_columns = ANGLES_N_COLUMNS if modality == "angles" else TRAJECTORIES_N_COLUMNS
 
@@ -180,8 +181,8 @@ def probe_kinematics(path: Path, modality: str) -> dict:
         header_lines = [f.readline() for _ in range(KIN_HEADER_LINES)]
         if any(line == "" for line in header_lines):
             return {"n_rows": 0, "n_columns": 0, "sampling_frequency_hz": None,
-                     "duration_s": 0.0, "status": "EMPTY",
-                     "notes": f"file shorter than the expected {KIN_HEADER_LINES}-line Vicon header"}
+                    "duration_s": 0.0, "status": "EMPTY",
+                    "notes": f"file shorter than the expected {KIN_HEADER_LINES}-line Vicon header"}
         fs_text = header_lines[1].strip()
         sampling_frequency_hz = float(fs_text) if _is_float(fs_text) else None
 
@@ -210,7 +211,7 @@ def probe_kinematics(path: Path, modality: str) -> dict:
 
     if n_columns is None:
         return {"n_rows": 0, "n_columns": 0, "sampling_frequency_hz": sampling_frequency_hz,
-                 "duration_s": 0.0, "status": "EMPTY", "notes": "no data rows after header"}
+                "duration_s": 0.0, "status": "EMPTY", "notes": "no data rows after header"}
 
     status = "OK"
     notes = []
@@ -227,15 +228,15 @@ def probe_kinematics(path: Path, modality: str) -> dict:
         if status == "OK":
             status = "MISSING_VALUES"
         notes.append(f"{rows_with_missing_values} row(s) contain missing (blank) values "
-                     "- likely marker occlusion near the trial boundaries, see dataset README")
+                     "- likely marker occlusion near the trial boundaries, see README.md")
     if blank_lines_skipped:
         notes.append(f"{blank_lines_skipped} blank line(s) skipped")
 
-    duration_s = (n_rows / sampling_frequency_hz) if sampling_frequency_hz else None
+    duration_s = n_rows / sampling_frequency_hz if sampling_frequency_hz else None
     return {
         "n_rows": n_rows, "n_columns": n_columns,
         "sampling_frequency_hz": sampling_frequency_hz, "duration_s": duration_s,
-        "status": status, "notes": "; ".join(notes),
+        "status": status, "notes": "; ".join(notes)
     }
 
 
@@ -252,7 +253,7 @@ def _format_progress(done: int, total: int, start_time: float, label: str, bar_w
     filled = int(bar_width * fraction)
     bar = "#" * filled + "-" * (bar_width - filled)
     elapsed = time.monotonic() - start_time
-    eta = (elapsed / done) * (total - done) if done else 0.0
+    eta = elapsed / done * (total - done) if done else 0.0
     line = (
         f"[{bar}] {done}/{total} ({fraction * 100:5.1f}%) "
         f"elapsed={elapsed:6.0f}s eta={eta:6.0f}s  {label}"
@@ -287,7 +288,7 @@ def build_manifest(root: Path, quiet: bool = False) -> pd.DataFrame:
             "repetition": meta["repetition"] if meta else None,
             "n_rows": None, "n_columns": None,
             "sampling_frequency_hz": None, "duration_s": None,
-            "status": None, "notes": "",
+            "status": None, "notes": ""
         }
 
         if meta is None:
@@ -307,7 +308,7 @@ def build_manifest(root: Path, quiet: bool = False) -> pd.DataFrame:
             participant = meta["participant"] if meta else path.relative_to(root).parts[0]
             now = time.monotonic()
             is_new_participant = participant != previous_participant
-            is_due = (now - last_print_time) >= PROGRESS_INTERVAL_S
+            is_due = now - last_print_time >= PROGRESS_INTERVAL_S
             if is_new_participant or is_due or i == total:
                 _print_progress(i, total, start_time, label=f"{participant}: {path.name}")
                 last_print_time = now
@@ -316,7 +317,7 @@ def build_manifest(root: Path, quiet: bool = False) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def _expected_keys_for_modality(modality: str):
+def _expected_keys_for_modality(modality: str) -> set[tuple[str, str | None, int]]:
     """The set of (task, frequency, repetition) keys expected for a modality."""
     keys = {(task, freq, rep) for task in TASKS for freq in FREQUENCIES for rep in REPETITIONS}
     keys |= {("start_position", None, rep) for rep in REPETITIONS}
@@ -359,12 +360,13 @@ def summarize(manifest: pd.DataFrame) -> None:
     n_known = 0
     for participant in found:
         for modality in ("hdsemg", "angles", "trajectories"):
-            present = {
-                (row.task, row.frequency, row.repetition)
-                for row in manifest[
-                    (manifest["participant"] == participant) & (manifest["modality"] == modality)
-                ].itertuples()
-            }
+            present = set()
+            subset = manifest[
+                (manifest["participant"] == participant) & (manifest["modality"] == modality)]
+
+            for row in subset.itertuples():
+                frequency = None if pd.isna(row.frequency) else row.frequency
+                present.add((row.task, frequency, row.repetition))
             for task, frequency, repetition in sorted(_expected_keys_for_modality(modality)):
                 if (task, frequency, repetition) in present:
                     continue
@@ -386,11 +388,11 @@ def summarize(manifest: pd.DataFrame) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", required=True, type=Path,
-                         help="Path to the Dataset/ folder (containing Sub001/ ... Sub021/)")
+                        help="Path to the Dataset/ folder (containing Sub001/ ... Sub021/)")
     parser.add_argument("--manifest-csv", type=Path, default=None,
-                         help="Optional path to save the full manifest as CSV")
+                        help="Optional path to save the full manifest as CSV")
     parser.add_argument("--quiet", action="store_true",
-                         help="Suppress per-batch progress output")
+                        help="Suppress per-batch progress output")
     args = parser.parse_args()
 
     if not args.root.is_dir():
@@ -398,6 +400,7 @@ def main() -> None:
 
     start = time.time()
     manifest = build_manifest(args.root, quiet=args.quiet)
+
     summarize(manifest)
     elapsed = time.time() - start
     print(f"\nDone in {elapsed:.1f} s. {len(manifest)} files scanned under {args.root}")

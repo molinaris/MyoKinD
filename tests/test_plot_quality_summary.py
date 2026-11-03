@@ -22,7 +22,7 @@ def _quality_table(n: int = 10) -> pd.DataFrame:
         "spr": [20.99] * n,
         "thdn": [8.92] * n,
         "coh": [0.88] * n,
-        "phase_lag": [-0.33] * n,
+        "phase_lag": [-0.33] * n
     })
 
 
@@ -58,14 +58,14 @@ def _channel_table(rows: list[tuple[str, float]]) -> pd.DataFrame:
         "participant": [p for p, _ in rows],
         "task": ["1"] * len(rows), "frequency": ["05"] * len(rows), "repetition": [0] * len(rows),
         "muscle": ["EDC"] * len(rows), "channel": list(range(len(rows))),
-        "snr_db": [s for _, s in rows],
+        "snr_db": [s for _, s in rows]
     })
 
 
 def test_channel_snr_rejection_summary_counts_instances_below_threshold():
     table = _channel_table([
         ("Sub001", 0.5), ("Sub001", 1.0), ("Sub001", 5.0),   # 2/3 below 1.8 dB
-        ("Sub002", 10.0), ("Sub002", 0.1),                    # 1/2 below 1.8 dB
+        ("Sub002", 10.0), ("Sub002", 0.1)                    # 1/2 below 1.8 dB
     ])
 
     summary = channel_snr_rejection_summary(table, threshold_db=1.8)

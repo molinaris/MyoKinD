@@ -13,7 +13,7 @@ def test_summarize_runs_on_synthetic_table_and_flags_the_worst_case(capsys):
         "muscle": ["EDC", "FDS", "EDC", "FDS"],
         "channel": [0, 0, 1, 1],
         "rms_uv": [1.2, 0.4, 2.0, 1.5],
-        "quant_penalty_db": [0.20, 0.45, 0.10, 0.15],
+        "quant_penalty_db": [0.20, 0.45, 0.10, 0.15]
     })
 
     summarize(df, penalty_threshold_db=0.35)

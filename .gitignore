@@ -3,4 +3,11 @@ __pycache__/
 .pytest_cache/
 *.csv
 !validation/quality_summary.csv
+!biomechanical_model/kinematic_metrics_participants.csv
+!biomechanical_model/kinematic_significant_interactions.csv
 *.png
+validation/Mytest.ipynb
+.ipynb_checkpoints/
+.vscode/
+.RData
+.Rhistory

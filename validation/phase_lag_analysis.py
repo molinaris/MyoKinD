@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Phase-lag (phase_lag) distribution analysis: reproduces the numbers behind
-the manuscript's discussion of its elevated standard deviation (-0.52 +/- 1.01
+the manuscript's discussion of its elevated standard deviation (-0.54 +/- 1.00
 rad, Fig. 5E), and the discrimination between three competing explanations,
 using the per-trial quality table from validation/aggregate_quality_metrics.py.
 

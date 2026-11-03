@@ -212,7 +212,7 @@ per-trial processing.
   21 participants (1069 valid trials - the 48 task trials plus the 3 `start_position` recordings per
   participant, minus Sub017's two documented exclusions - computed with `validation/aggregate_wrist_precision.py`),
   the within-trial standard deviation of this distance was 0.31 mm on average (95th percentile, 0.67 mm).
-- **`phase_lag`'s elevated standard deviation (-0.52 ± 1.01 rad) is trial-to-trial, not between-participant,
+- **`phase_lag`'s elevated standard deviation (-0.54 ± 1.00 rad) is trial-to-trial, not between-participant,
   and not explained by a fixed instrumentation delay, phase wrapping, or a task-specific sign bug:**
   `validation/phase_lag_analysis.py` tests and rejects all three (see its module docstring), and quantifies
   the spread with ICC(1) - the one-way random-effects intraclass correlation (Fisher, 1925; Searle, Casella &

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Demonstrate the HD sEMG <-> kinematics time alignment for one trial.
 
-There is no timestamp or trigger column in either modality's CSV files: a
-common hardware trigger is assumed to start both recordings at t=0, but that
-is a design assumption, not something verifiable from the files themselves.
+There is no timestamp or trigger column in either modality's CSV files. The
+HD sEMG recording starts first, and the motion capture recording starts
+approximately 77 ms later (trial-to-trial SD approximately 26 ms, the UDP/IP
+trigger latency); this offset cannot be recovered from the files themselves.
 This script does **not** perform any real signal-based synchronization (e.g.
 cross-correlation); it only reproduces the original analysis approach:
 assume t=0 is shared, trim

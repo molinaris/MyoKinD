@@ -5,9 +5,8 @@ import numpy as np
 from scipy.signal import freqz
 from scipy.signal.windows import hann
 
-from validation.hdsemg_quality import (
-    HDSEMG_FS, bandpass_filter, compute_smr, compute_snr, compute_spr, periodic_hann, trim_signal,
-)
+from validation.hdsemg_quality import (HDSEMG_FS, bandpass_filter, compute_smr, compute_snr,
+                                       compute_spr, periodic_hann, trim_signal)
 
 
 def test_periodic_hann_matches_scipy_periodic_window():

@@ -22,23 +22,26 @@ import argparse
 import sys
 from pathlib import Path
 
+from matplotlib.figure import Figure
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from examples.load_hdsemg import HDSEMG_FS, load_hdsemg_csv, moving_rms, split_edc_fds, trial_filename  # noqa: E402
+from examples.load_hdsemg import (HDSEMG_FS, load_hdsemg_csv, moving_rms,  # noqa: E402
+                                  split_edc_fds, trial_filename)
 from examples.load_kinematics import KIN_FS, load_angles_csv  # noqa: E402
 from validation.hdsemg_quality import bandpass_filter  # noqa: E402
-from validation.kinematic_quality import trim_signal  # noqa: E402
+from validation.kinematic_quality import FREQ_CODE_TO_HZ, trim_signal  # noqa: E402
 
 RMS_WINDOW_S = 0.3
 FINGERS = ["thumb", "index", "middle", "ring", "little"]
 
 
-def make_figure(root: Path, participant: str, task: str, freq: str, rep: int):
+def make_figure(root: Path, participant: str, task: str, freq: str, rep: int) -> Figure:
     import matplotlib.pyplot as plt
 
-    emg_path = root / participant / "HD_sEMG" / trial_filename(participant, task, freq, rep)
-    angles_path = root / participant / "HandKinematics" / "Angles" / trial_filename(participant, task, freq, rep)
+    name = trial_filename(participant, task, freq, rep)
+    emg_path = root / participant / "HD_sEMG" / name
+    angles_path = root / participant / "HandKinematics" / "Angles" / name
 
     emg_full = load_hdsemg_csv(emg_path)
     t_emg = trim_signal(np.arange(emg_full.shape[0]) / HDSEMG_FS, HDSEMG_FS)
@@ -52,13 +55,13 @@ def make_figure(root: Path, participant: str, task: str, freq: str, rep: int):
 
     fig, axes = plt.subplots(3, 1, figsize=(7, 6), sharex=True)
 
-    axes[0].plot(t_emg, rms_edc, color="tab:blue", alpha=0.15, linewidth=0.5)
-    axes[0].plot(t_emg, rms_edc.mean(axis=1), color="tab:blue", linewidth=1.5)
+    axes[0].plot(t_emg, rms_edc, color="tab:blue", alpha=0.15, linewidth=0.3)
+    axes[0].plot(t_emg, rms_edc.mean(axis=1), color="tab:blue", linewidth=1.0, zorder=10)
     axes[0].set_ylabel("EDC RMS (uV)")
     axes[0].text(0.01, 1, "A)", transform=axes[0].transAxes, fontweight="bold", va="top")
 
-    axes[1].plot(t_emg, rms_fds, color="tab:orange", alpha=0.15, linewidth=0.5)
-    axes[1].plot(t_emg, rms_fds.mean(axis=1), color="tab:orange", linewidth=1.5)
+    axes[1].plot(t_emg, rms_fds, color="tab:orange", alpha=0.15, linewidth=0.3)
+    axes[1].plot(t_emg, rms_fds.mean(axis=1), color="tab:orange", linewidth=1.0, zorder=10)
     axes[1].set_ylabel("FDS RMS (uV)")
     axes[1].text(0.01, 1, "B)", transform=axes[1].transAxes, fontweight="bold", va="top")
 
@@ -67,12 +70,19 @@ def make_figure(root: Path, participant: str, task: str, freq: str, rep: int):
         axes[2].plot(t_kin, trim_signal(angles[finger].to_numpy(), KIN_FS), label=finger)
     axes[2].set_ylabel("Position (deg)")
     axes[2].set_xlabel("Time (s)")
-    axes[2].legend(frameon=False, ncols=5, fontsize=8, loc="upper right")
+    fig.tight_layout()
+    fig.canvas.draw()
+    angle_bottom, angle_top = axes[2].get_ylim()
+    angle_ticks = axes[2].get_yticks()
+    axes[2].set_ylim(angle_bottom, angle_top + 0.25 * (angle_top - angle_bottom))
+    angle_ticks = angle_ticks[(angle_ticks >= angle_bottom) & (angle_ticks <= angle_top)]
+    axes[2].set_yticks(angle_ticks)
+    axes[2].legend(frameon=False, ncols=5, fontsize=8, loc="upper center", bbox_to_anchor=(0.5, 0.98))
     axes[2].text(0.01, 1, "C)", transform=axes[2].transAxes, fontweight="bold", va="top")
 
     for ax in axes:
         ax.spines[["right", "top"]].set_visible(False)
-    fig.suptitle(f"{participant} - task {task}, {freq} Hz, rep {rep}")
+    fig.suptitle(f"{participant} - task {task}, {FREQ_CODE_TO_HZ[freq]:.2f} Hz, rep {rep}")
     fig.tight_layout()
     return fig
 

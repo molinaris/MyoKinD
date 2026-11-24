@@ -5,15 +5,14 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from validation.phase_lag_analysis import (
-    add_derived_columns, bimodality_report, icc1_one_way, mode_coherence_summary,
-    ratio_test_h1, task_frequency_crosstab, wrapping_test_h2,
-)
+from validation.phase_lag_analysis import (add_derived_columns, bimodality_report, icc1_one_way,
+                                           mode_coherence_summary, ratio_test_h1,
+                                           task_frequency_crosstab, wrapping_test_h2)
 
 
 def test_add_derived_columns_maps_frequency_task_name_and_thumb():
     df = pd.DataFrame({
-        "task_freq": [5, 75], "task": [1, 4], "phase_lag": [-0.5, -0.5],
+        "task_freq": [5, 75], "task": [1, 4], "phase_lag": [-0.5, -0.5]
     })
     out = add_derived_columns(df)
 
@@ -32,7 +31,7 @@ def _fixed_delay_table(tau_s: float) -> pd.DataFrame:
     phase_075 = -2 * np.pi * 0.75 * tau_s
     df = pd.DataFrame({
         "task_freq": [5] * 3 + [75] * 3, "task": ["1"] * 6,
-        "phase_lag": [phase_050] * 3 + [phase_075] * 3,
+        "phase_lag": [phase_050] * 3 + [phase_075] * 3
     })
     return add_derived_columns(df)
 
@@ -50,7 +49,7 @@ def test_ratio_test_h1_ratio_is_not_1_5_when_phase_is_frequency_independent():
     # The actual MyoKinD pattern: same phase at both frequencies (rejects H1).
     df = pd.DataFrame({
         "task_freq": [5] * 3 + [75] * 3, "task": ["1"] * 6,
-        "phase_lag": [-0.54] * 3 + [-0.54] * 3,
+        "phase_lag": [-0.54] * 3 + [-0.54] * 3
     })
     df = add_derived_columns(df)
     result = ratio_test_h1(df)
@@ -69,7 +68,7 @@ def test_wrapping_test_h2_converges_when_wrapping_is_the_true_mechanism():
     phases_pos_wrapped = [-2 * np.pi * f * t + 2 * np.pi for t in taus_pos_true_s]
 
     df = pd.DataFrame({
-        "task_freq": [5] * 6, "task": ["1"] * 6, "phase_lag": phases_neg + phases_pos_wrapped,
+        "task_freq": [5] * 6, "task": ["1"] * 6, "phase_lag": phases_neg + phases_pos_wrapped
     })
     df = add_derived_columns(df)
 
@@ -78,16 +77,16 @@ def test_wrapping_test_h2_converges_when_wrapping_is_the_true_mechanism():
     assert result["median_tau_ms_asis_nonpositive_group"] == pytest.approx(900.0)
     # unwrapping brings the two groups within 200 ms of each other...
     gap_unwrapped = abs(result["median_tau_ms_unwrapped_positive_group"]
-                         - result["median_tau_ms_asis_nonpositive_group"])
+                        - result["median_tau_ms_asis_nonpositive_group"])
     # ...vastly closer than the as-is (not unwrapped) delay, which has the wrong sign entirely
     gap_asis = abs(result["median_tau_ms_asis_positive_group"]
-                    - result["median_tau_ms_asis_nonpositive_group"])
+                   - result["median_tau_ms_asis_nonpositive_group"])
     assert gap_unwrapped < gap_asis
 
 
 def test_task_frequency_crosstab_shape_and_values():
     df = pd.DataFrame({
-        "task_freq": [5, 75, 5, 75], "task": [1, 1, 2, 2], "phase_lag": [-0.1, -0.2, -0.3, -0.4],
+        "task_freq": [5, 75, 5, 75], "task": [1, 1, 2, 2], "phase_lag": [-0.1, -0.2, -0.3, -0.4]
     })
     df = add_derived_columns(df)
     cross = task_frequency_crosstab(df)
@@ -116,7 +115,7 @@ def test_mode_coherence_summary_separates_the_two_coherence_levels():
     n = 20
     df = pd.DataFrame({
         "phase_lag": [-5.0] * n + [5.0] * n,
-        "coh": [0.9] * n + [0.3] * n,
+        "coh": [0.9] * n + [0.3] * n
     })
     summary = mode_coherence_summary(df)
     assert len(summary) == 2

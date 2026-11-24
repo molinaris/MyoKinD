@@ -53,7 +53,7 @@ def _format_progress(done: int, total: int, start_time: float, label: str, bar_w
     filled = int(bar_width * fraction)
     bar = "#" * filled + "-" * (bar_width - filled)
     elapsed = time.monotonic() - start_time
-    eta = (elapsed / done) * (total - done) if done else 0.0
+    eta = elapsed / done * (total - done) if done else 0.0
     line = (
         f"[{bar}] {done}/{total} ({fraction * 100:5.1f}%) "
         f"elapsed={elapsed:6.0f}s eta={eta:6.0f}s  {label}"
@@ -100,7 +100,7 @@ def collect(root: Path, participants: list[str]) -> tuple[pd.DataFrame, pd.DataF
 
         now = time.monotonic()
         is_new_participant = participant != previous_participant
-        is_due = (now - last_print_time) >= PROGRESS_INTERVAL_S
+        is_due = now - last_print_time >= PROGRESS_INTERVAL_S
         if is_new_participant or is_due or i == total:
             _print_progress(i, total, start_time, label=f"{participant} task={task} freq={freq} rep={rep}")
             last_print_time = now
@@ -149,19 +149,19 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", required=True, type=Path, help="Dataset root (contains SubXXX/)")
     parser.add_argument("--participants", nargs="+", required=True,
-                         help="Participant IDs (e.g. Sub001 Sub002), or 'all' for all 21")
+                        help="Participant IDs (e.g. Sub001 Sub002), or 'all' for all 21")
     parser.add_argument("--output-csv", type=Path, default=None,
-                         help="Save the per-trial quality table (participant, task, task_freq, "
-                              "trial, snr, smr, spr, thdn, coh, phase_lag)")
+                        help="Save the per-trial quality table (participant, task, task_freq, "
+                             "trial, snr, smr, spr, thdn, coh, phase_lag)")
     parser.add_argument("--output-csv-channels", type=Path, default=None,
-                         help="Save the raw per-channel HD sEMG table (participant, task, frequency, "
-                              "repetition, muscle, channel, snr_db, smr_db, spr_db), before it is "
-                              "averaged across the 128 channels into the quality table above - needed "
-                              "for per-channel analyses such as figures/plot_quality_summary.py's "
-                              "SNR-threshold channel rejection rate")
+                        help="Save the raw per-channel HD sEMG table (participant, task, frequency, "
+                             "repetition, muscle, channel, snr_db, smr_db, spr_db), before it is "
+                             "averaged across the 128 channels into the quality table above - needed "
+                             "for per-channel analyses such as figures/plot_quality_summary.py's "
+                             "SNR-threshold channel rejection rate")
     args = parser.parse_args()
 
-    participants = ALL_PARTICIPANTS if args.participants == ["all"] else args.participants
+    participants = ALL_PARTICIPANTS if [p.lower() for p in args.participants] == ["all"] else args.participants
 
     hdsemg, kinematic = collect(args.root, participants)
     quality_table = build_quality_table(hdsemg, kinematic)

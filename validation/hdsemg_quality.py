@@ -12,7 +12,7 @@ filtering (``bandpass_filter`` below is provided for other scripts, e.g.
 - Temporal trim: discard the first 4 s and the last 1 s of the 45 s trial, to
   avoid the transients of task onset/offset (same convention used for the
   kinematic recordings, for temporal correspondence between both modalities).
-- PSD: Welch, 2 s window, no overlap, explicit periodic Hann window.
+- PSD: Welch, 4 s window, no overlap, explicit periodic Hann window.
 - SNR  = 10*log10(sum(psd_task) / sum(psd_rest))
 - SMR  = 10*log10(sum(psd_task) / sum(psd_task[f <= 10 Hz]))
 - SPR  = 10*log10(sum(psd_task) / sum(psd_task[60, 120, ..., 960 Hz bins]))
@@ -34,7 +34,7 @@ from scipy.signal import butter, sosfiltfilt, welch
 from scipy.signal.windows import hann
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from examples.load_hdsemg import HDSEMG_FS, load_hdsemg_csv, split_edc_fds, trial_filename  # noqa: E402
+from examples.load_hdsemg import HDSEMG_FS, load_hdsemg_csv, trial_filename  # noqa: E402
 
 TASKS = [str(t) for t in range(1, 9)]
 FREQUENCIES = ["05", "075"]
@@ -59,13 +59,13 @@ def periodic_hann(n: int) -> np.ndarray:
 
 
 def bandpass_filter(x: np.ndarray, fs: float, low: float = FILTER_LOW_HZ,
-                     high: float = FILTER_HIGH_HZ, order: int = FILTER_ORDER) -> np.ndarray:
+                    high: float = FILTER_HIGH_HZ, order: int = FILTER_ORDER) -> np.ndarray:
     sos = butter(order, [low, high], btype="bandpass", fs=fs, output="sos")
     return sosfiltfilt(sos, x, axis=0)
 
 
 def trim_signal(x: np.ndarray, fs: float, start_s: float = TRIM_START_S,
-                 end_s: float = TRIM_END_S) -> np.ndarray:
+                end_s: float = TRIM_END_S) -> np.ndarray:
     """Discard the first `start_s` seconds and everything after `end_s` seconds."""
     i0 = int(round(start_s * fs))
     i1 = int(round(end_s * fs))
@@ -121,7 +121,7 @@ def process_trial(root: Path, participant: str, task: str, freq: str, rep: int) 
     return pd.DataFrame({
         "participant": participant, "task": task, "frequency": freq, "repetition": rep,
         "muscle": muscle, "channel": channel_in_muscle,
-        "snr_db": snr, "smr_db": smr, "spr_db": spr,
+        "snr_db": snr, "smr_db": smr, "spr_db": spr
     })
 
 

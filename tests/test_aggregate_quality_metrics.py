@@ -13,21 +13,21 @@ def _hdsemg_rows(repetition: int, snr: float, smr: float, spr: float, n_channels
         {
             "participant": "Sub001", "task": "1", "frequency": "05", "repetition": repetition,
             "muscle": "EDC", "channel": channel,
-            "snr_db": snr + channel, "smr_db": smr + channel, "spr_db": spr + channel,
+            "snr_db": snr + channel, "smr_db": smr + channel, "spr_db": spr + channel
         }
         for channel in range(n_channels)
     ]
 
 
 def _kinematic_rows(repetition: int, thdn: float, coh: float, phase: float,
-                     reference_finger: str = "index") -> list[dict]:
+                    reference_finger: str = "index") -> list[dict]:
     return [
         {
             "participant": "Sub001", "task": "1", "frequency": "05", "repetition": repetition,
             "finger": finger, "is_reference_finger": finger == reference_finger,
             "thdn_percent": thdn,
             "coherence": coh if finger == reference_finger else float("nan"),
-            "phase_lag_rad": phase if finger == reference_finger else float("nan"),
+            "phase_lag_rad": phase if finger == reference_finger else float("nan")
         }
         for finger in FINGERS
     ]
@@ -43,7 +43,7 @@ def test_build_quality_table_averages_channels_and_fingers_per_trial():
     table = build_quality_table(hdsemg, kinematic)
 
     assert list(table.columns) == [
-        "participant", "task", "task_freq", "trial", "snr", "smr", "spr", "thdn", "coh", "phase_lag",
+        "participant", "task", "task_freq", "trial", "snr", "smr", "spr", "thdn", "coh", "phase_lag"
     ]
     assert len(table) == 2
 
